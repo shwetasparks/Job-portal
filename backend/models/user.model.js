@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 
+//register
 const userSchema=new mongoose.Schema({
     fullName:{
         type:String,
