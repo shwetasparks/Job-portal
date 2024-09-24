@@ -16,6 +16,7 @@ export const register = async (req, res) => {
         };
 
         //email: check if user already existed 
+
         const user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({
@@ -79,6 +80,7 @@ export const login = async (req, res) => {
             return res.status(400).json({
                 message: "incorrect email or password",
                 success: false
+                
             })
         };
 
@@ -109,7 +111,7 @@ export const login = async (req, res) => {
             role:user.role,
             profile:user.profile
             
-        }
+        } 
 
 
 
@@ -123,4 +125,20 @@ export const login = async (req, res) => {
         console.log('error occured');
     }
 
+}
+
+//logout controller
+export const logout=async(req,res)=>{
+    try {
+        return res.status(200).cookie("token","",{maxAge:0}).json({
+            message: "logged out successfully",
+            success: true,
+        })
+    } catch (error) {
+        console.log(error)
+        
+    }
+}
+
+//update 
 
