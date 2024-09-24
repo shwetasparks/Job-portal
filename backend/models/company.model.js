@@ -28,3 +28,5 @@ const companySchema=new mongoose.Schema({
 
 
 },{timeStamp:true})
+
+ export default companySchema;
