@@ -4,11 +4,16 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import connectDB from './utils/db.js';
 import cors from 'cors';
+import userRoute from "./routes/user.routes.js"
 
 dotenv.config();
 const app=express();
 
 const PORT=process.env.PORT || 3000;
+
+
+//api's
+app.use('/api/v1/user',userRoute)
 
 
 //middleware

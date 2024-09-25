@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 
 
 
+
+
 // #################### REGISTER #####################
 export const register = async (req, res) => {
     try {
@@ -178,7 +180,7 @@ export const updateProfile = async (req, res) => {
         let user = await User.findById(userId);
 
 
-        //if user not found
+        // if user not found
         if (!user) {
             return res.status(404).json({
                 message: "User not found",
@@ -186,13 +188,13 @@ export const updateProfile = async (req, res) => {
             })
         }
 
-        user.fullname=fullname,
-        user.email=email,
-        user.phoneNumber=phoneNumber,
-        user.skills=skillsArray,
-        user.profile.bio=bio,
-        user.password=password;
-        user.profile.skills=skillsArray
+        user.fullname = fullname,
+            user.email = email,
+            user.phoneNumber = phoneNumber,
+            user.skills = skillsArray,
+            user.profile.bio = bio,
+            user.password = password;
+        user.profile.skills = skillsArray
 
 
         // ########################## resume here ########################
@@ -210,13 +212,12 @@ export const updateProfile = async (req, res) => {
         }
 
         return res.status(200).json({
-            message:'Profile update',
+            message: 'Profile update',
             user,
             success: true
         })
 
     } catch (error) {
         console.log("error in update profile", error)
-
     }
 }
