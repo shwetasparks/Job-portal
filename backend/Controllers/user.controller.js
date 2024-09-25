@@ -1,190 +1,222 @@
-//register
-import { User } from '../models/user.model.js'
-import bcrypt from "bcryptjs";
 
-//################################# REGISTER #########################
-// STEP 1 : Export the register function that handles the registration process
+import { User } from "../models/user.model.js";
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken";
+
+
+
+
+// #################### REGISTER #####################
 export const register = async (req, res) => {
     try {
-        // STEP 2 : Extract User details from the request body (fullName, email, phoneNumber, password, role)
-        const { fullName, email, phoneNumber, password, role } = req.body;
+        const { fullname, email, phoneNumber, password, role } = req.body;
+        //if anything is not available
 
-        // STEP 3 : Validate if any field is missing. If so, send a 400 response with an error message.
-        if (!fullName || !email || !phoneNumber || !password || !role) {
+        if (!fullname || !email || !phoneNumber || !password || !role) {
+            return res.status(400).json
+                ({
+                    message: "Please fill all the fields",
+                    success: false
+                })
+        };
+
+
+        //check if already register
+        let user = await User.findOne({ email });
+
+        if (!user) {
             return res.status(400).json({
-                message: "All fields are required",
+                message: "user with this Email already exist",
                 success: false
-            });
+            })
         }
 
-        // STEP 4 : Check if a User with the provided email already exists in the database.
-        const User = await User.findOne({ email });
-        if (User) {
-            return res.status(400).json({
-                message: 'User already exists',
-                success: false,
-            });
-        }
-
-        // STEP 5 : Hash the password using bcrypt to securely store it in the database.
+        //hashed the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // STEP 6 : Create a new User with the hashed password and other provided details.
+        //create new user
         await User.create({
-            fullName,
+            fullname,
             email,
             phoneNumber,
-            password: hashedPassword,  // Store the hashed password
             role,
+            password: hashedPassword,
         });
-
-        // STEP 7 : Send a success response after successfully creating the User.
-        return res.status(201).json({
-            message: 'User created successfully',
+        res.status(201).json({
+            message: "User created successfully",
             success: true
         });
 
     } catch (error) {
+        console.log("error in register", error)
 
-        // STEP 8 : Catch and log any errors that occur during the process.
-        console.log(error);
     }
-};
+}
 
-
-
-
-
-// ############################# LOGIN ###########################################
-
+// ################### LOGIN ####################
 export const login = async (req, res) => {
     try {
+        const { email, role, password, fullname } = req.body;
 
-        // STEP 1: Extract the User input (email, password, role) from the request body
-        const { email, password, role } = req.body;
-
-        // STEP 2: Check if all required fields (email, password, role) are provided
+        //if any data missing
         if (!email || !password || !role) {
+            return res.status(400).json
+                ({
+                    message: "Please fill all the fields",
+                    success: false
+                })
+        };
+
+        //if user already available check it using email
+
+        const user = await User.findOne({ email });
+
+        //if not found user
+        if (!user) {
             return res.status(400).json({
-                message: "All fields are required",
+                message: "incorrect email or password",
                 success: false
-            });
+            })
         }
 
-        // STEP 3: Find a User by their email in the database
+        //match it with password
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
 
-        let User = await User.findOne({ email });
-
-        // STEP 4: Check if the User exists in the database
-        if (!User) {
-            return res.status(400).json({
-                message: 'User does not exist',
-                success: false,
-            });
-        }
-
-        // STEP 5: Compare the input password with the stored hashed password
-        const isPasswordMatch = await bcrypt.compare(password, User.password);
-
-        // STEP 6: If the password doesn't match, return an error
+        //if password not match
         if (!isPasswordMatch) {
             return res.status(400).json({
-                message: "Incorrect email or password",
+                message: "Incorrect password",
                 success: false
             });
         }
 
-        // STEP 7: Check if the role provided matches the User's role
-        if (role !== User.role) {
+
+        //if role is correct or not
+        if (role !== user.role) {
             return res.status(400).json({
-                message: "Incorrect role provided",
+                message: 'account not exist with current role',
                 success: false
-            });
+            })
         }
 
-        // STEP 8: If everything is correct, proceed with login (JWT generation, session creation, etc.)
-        // This part of the code is missing, where typically a token is generated and sent to the client.
 
-    } catch (error) {
-        // STEP 9: Catch and log any errors that occur during the process
-        console.log(error);
-        // Optionally, you can send a server error response back to the client
-        return res.status(500).json({
-            message: "Server error",
-            success: false
-        });
-    }
-};
+        // ########## TOKEN ##############
 
+        const tokenData = {
+            userId: user._id
+        }
 
-// ################################# GENERATE TOKEN ##########################
+        //using jwt token
+        const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' })
 
-// Step for JWT token generation and response handling
+        //creating  USER
 
-    /**
-     * STEP 9: jwt token: consists of three parts: header, payload, and signature
-     * - Header: Contains metadata like the signing algorithm used (e.g., HS256).
-     * - Payload: Contains the data/claims (e.g., UserId).
-     * - Signature: Created by signing the header and payload with the secret key.
-     */
-    
-    // STEP 10: Create token data with the User's unique identifier (UserId)
-    const tokenData = {
-        UserId: User._id  // Provides a unique identifier for the User across sessions
-    };
-
-    // STEP 11: Generate the JWT using the token data, secret key, and expiration time of 1 day
-    const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
-
-    // STEP 12: Prepare the User object excluding sensitive data (e.g., password)
-    User = {
-        _id: User._id,
-        fullName: User.fullName,
-        email: User.email,
-        phoneNumber: User.phoneNumber,
-        role: User.role,
-        profile: User.profile  // Optional: Add profile details if available
-    };
-
-    // STEP 13: Send the generated JWT as a cookie in the response
-    return res.status(200)
-        .cookie('token', token, {
-            maxAge: 1 * 24 * 60 * 60 * 1000,  // 1 day in milliseconds
-            httpOnly: true,  // Ensures the cookie is only accessible by the server (prevents JavaScript access)
-            sameSite: 'strict'  // Protects against CSRF attacks by only allowing the cookie to be sent from the same site
-        })
-        .json({
-            message: `Welcome back ${User.fullName}`,  // Personalized success message
-            success: true,  // Indicates that the login was successful
-        });
-
-} catch (error) {
-    // STEP 14: Handle any errors that occur during the process
-    console.log('Error occurred:', error);
-    return res.status(500).json({
-        message: "An error occurred while processing your request.",
-        success: false
-    });
-}
+        user = {
+            _id: user._id,
+            fullname: user.fullname,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            role: user.role,
+            profile: user.profile
+        }
 
 
 
-
-
-
-      
-// ############################## logout controller ########################
-export const logout=async(req,res)=>{
-    try {
-        return res.status(200).cookie("token","",{maxAge:0}).json({
-            message: "logged out successfully",
+        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpsOnly: true, sameSite: 'strict' }).json({
+            message: `Welcome back ${user.fullname}`,
+            user,
             success: true,
         })
+
     } catch (error) {
-        console.log(error)
-        
+        console.log('error in login', error)
+
     }
 }
 
-//update 
+//################### LOGOUT ################################
+export const logout = async (req, res) => {
+    try {
+        return res.status(200).cookie("token", "", { maxAge: 0 }).json({
+            message: "logged out successfully",
+            success: true
+        })
 
+    } catch (error) {
+        console.log("error in logout", error)
+
+    }
+}
+
+
+// ########################### update profile ######################
+export const updateProfile = async (req, res) => {
+    try {
+        const { fullname, email, phoneNumber, skills, bio } = req.body;
+
+        //if anything missing
+        if (!fullname || !email || !phoneNumber || !password || !bio || !skills) {
+            return res.status(400).json
+                ({
+                    message: "Please fill all the fields",
+                    success: false
+                })
+        };
+
+        //#################### CLOUDINARY ################################
+
+
+
+
+
+        //skills from string to array
+        const skillsArray = skills.split(",");
+
+        //authentiated (middleware auth)
+        const userId = req.id;
+
+        let user = await User.findById(userId);
+
+
+        //if user not found
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                success: false
+            })
+        }
+
+        user.fullname=fullname,
+        user.email=email,
+        user.phoneNumber=phoneNumber,
+        user.skills=skillsArray,
+        user.profile.bio=bio,
+        user.password=password;
+        user.profile.skills=skillsArray
+
+
+        // ########################## resume here ########################
+
+
+        await user.save();
+
+        user = {
+            _id: user._id,
+            fullname: user.fullname,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            role: user.role,
+            profile: user.profile
+        }
+
+        return res.status(200).json({
+            message:'Profile update',
+            user,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("error in update profile", error)
+
+    }
+}
